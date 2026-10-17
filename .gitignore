@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 data/
+
+# Downloaded by scripts/data_gen/run_synthea.sh
+scripts/data_gen/synthea-with-dependencies.jar
 __pycache__/
 .pytest_cache/
 .env
