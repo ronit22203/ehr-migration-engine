@@ -86,7 +86,7 @@ scripts/data_gen/     # Synthea, MTSamples, and dirty-fax generators
 tests/                # ingestion, spatial parsing, state machine, FHIR
 ```
 
-`data/` is gitignored. It holds source documents and derived artifacts, including protected health information when the pipeline is pointed at a real clinic drop.
+`data/01_raw/` is committed so a clone includes the synthetic Synthea charts, MTSamples notes, and fax PDFs. Later stages (`data/02_triage` through `data/05_fhir`) stay gitignored. Do not commit a real clinic drop into `data/01_raw/`.
 
 ## Development
 

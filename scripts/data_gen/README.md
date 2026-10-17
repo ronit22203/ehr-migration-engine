@@ -2,7 +2,7 @@
 
 These scripts fill `data/01_raw/` at the project root. Output paths are resolved from each script file, so the files land in the same place whether you use `make` or run a script from another directory.
 
-`data/` is gitignored. Nothing generated here is committed.
+`data/01_raw/` is committed so other people can clone the corpus. Later pipeline stages stay gitignored.
 
 ## What lands where
 

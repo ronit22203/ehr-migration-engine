@@ -8,7 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
-data/
+
+# Later pipeline stages stay local. data/01_raw is the shared synthetic corpus.
+data/*
+!data/01_raw/
 
 # Downloaded by scripts/data_gen/run_synthea.sh
 scripts/data_gen/synthea-with-dependencies.jar
