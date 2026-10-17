@@ -46,18 +46,18 @@ def text_to_image(text: str) -> np.ndarray:
 
 
 def degrade_image(img_array: np.ndarray) -> np.ndarray:
-    """Apply severe physical degradation to simulate a bad fax or scan."""
-    angle = np.random.uniform(-2.5, 2.5)
+    """Skew, grain, and lightly blur a page without eroding character strokes."""
+    angle = np.random.uniform(-1.5, 1.5)
     height, width = img_array.shape[:2]
     matrix = cv2.getRotationMatrix2D((width / 2, height / 2), angle, 1.0)
-    img_rotated = cv2.warpAffine(img_array, matrix, (width, height), borderValue=255)
+    img_skewed = cv2.warpAffine(img_array, matrix, (width, height), borderValue=255)
 
-    noise = np.random.normal(0, 25, img_rotated.shape).astype(np.uint8)
-    img_noisy = cv2.add(img_rotated, noise)
-    img_blurred = cv2.GaussianBlur(img_noisy, (5, 5), 0)
+    noise = np.random.normal(0, 10, img_skewed.shape).astype(np.float32)
+    img_noisy = np.clip(img_skewed.astype(np.float32) + noise, 0, 255).astype(np.uint8)
 
-    _, img_thresh = cv2.threshold(img_blurred, 150, 255, cv2.THRESH_BINARY)
-    return img_thresh
+    img_soft = cv2.GaussianBlur(img_noisy, (3, 3), 0)
+    _, img_final = cv2.threshold(img_soft, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return img_final
 
 
 def generate_faxes() -> None:
