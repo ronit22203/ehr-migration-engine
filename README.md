@@ -82,7 +82,7 @@ data/
 ├── 03_ocr/
 ├── 04_structured/
 └── 05_fhir/
-scripts/data_gen/     # Synthea runs and synthetic dirty-fax pages
+scripts/data_gen/     # Synthea, MTSamples, and dirty-fax generators
 tests/                # ingestion, spatial parsing, state machine, FHIR
 ```
 
@@ -97,4 +97,4 @@ uv sync
 uv run ehr-migration-engine
 ```
 
-Synthetic source documents are produced from `scripts/data_gen/` (Synthea for structured charts, dirty-fax generation for unstructured pages) so the pipeline can be exercised without real patient data.
+Synthetic source documents are produced from [`scripts/data_gen/`](scripts/data_gen/README.md). `make data-raw` fills `data/01_raw/` with Synthea charts, MTSamples notes, and degraded fax PDFs.
