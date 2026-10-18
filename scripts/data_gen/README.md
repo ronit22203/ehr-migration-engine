@@ -31,9 +31,10 @@ make data-mtsamples    # full note table, plus 24 long plain-text charts
 make data-faxes        # 8 multi-page scanned fax packets
 make data-notes        # notes, then faxes
 make data-raw          # all of the above, in that order
+make data-run-raw      # copy fax packets into triage and split each page
 ```
 
-`make data-faxes` expects `data/01_raw/mtsamples/text_files/` to already exist. `make data-notes` runs the fetch first.
+`make data-faxes` expects `data/01_raw/mtsamples/text_files/` to already exist. `make data-notes` runs the fetch first. `make data-run-raw` expects the packet PDFs in `data/01_raw/faxes/` and writes one file per page under `data/02_triage/atomic_pages/`.
 
 The same scripts can be called directly:
 

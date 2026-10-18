@@ -3,7 +3,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 UV   := uv run --project $(ROOT) python
 
-.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw triage-pdfs
+.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr
 
 help:
 	@printf '%s\n' \
@@ -14,8 +14,11 @@ help:
 		'  make data-faxes       8 multi-page fax packets from those notes' \
 		'  make data-notes       notes, then faxes' \
 		'  make data-raw         all three generators, in order' \
+		'  make data-run-raw     slice data/01_raw/faxes into single-page PDFs' \
 		'' \
-		'  make triage-pdfs      split data/02_triage/unstructured into single pages'
+		'  make triage-pdfs      split data/02_triage/unstructured into single pages' \
+		'' \
+		'  make ocr              Surya OCR on atomic pages into data/03_ocr'
 
 data-synthea:
 	$(ROOT)/scripts/data_gen/run_synthea.sh
@@ -30,5 +33,14 @@ data-notes: data-mtsamples data-faxes
 
 data-raw: data-synthea data-notes
 
+data-run-raw:
+	rm -rf $(ROOT)/data/02_triage/unstructured $(ROOT)/data/02_triage/atomic_pages
+	mkdir -p $(ROOT)/data/02_triage/unstructured
+	cp $(ROOT)/data/01_raw/faxes/*.pdf $(ROOT)/data/02_triage/unstructured/
+	$(UV) -m ehr_migration_engine.ingestion.pdf_handler
+
 triage-pdfs:
 	$(UV) -m ehr_migration_engine.ingestion.pdf_handler
+
+ocr:
+	PYTHONUNBUFFERED=1 LOGLEVEL=DEBUG $(UV) -m ehr_migration_engine.vision.surya_client
