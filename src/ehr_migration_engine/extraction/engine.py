@@ -1,16 +1,52 @@
 import json
+import threading
+import time
+from datetime import datetime
 from pathlib import Path
+
 from openai import OpenAI
+
 from .state_machine import validate_extraction
 
 ROOT = Path(__file__).resolve().parents[3]
 TEXT_DIR = ROOT / "data" / "03_ocr" / "parsed_text"
 STRUCTURED_DIR = ROOT / "data" / "04_structured"
 
-# Ollama's local OpenAI-compatible endpoint
-client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+# Ollama's local OpenAI-compatible endpoint.
+# The SDK otherwise waits 10 minutes, which is what turned one slow page into a 500.
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama", timeout=120.0)
 MODEL = "medgemma:4b"
 MAX_RETRIES = 3
+MAX_TOKENS = 768
+
+
+def _log(message: str) -> None:
+    stamp = datetime.now().strftime("%H:%M:%S")
+    print(f"{stamp} [*] {message}", flush=True)
+
+
+class _WaitLog:
+    """Print a line every few seconds while a completion call is blocking."""
+
+    def __init__(self, message: str, interval: float = 15.0) -> None:
+        self._message = message
+        self._interval = interval
+        self._stop = threading.Event()
+        self._started = time.perf_counter()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def __enter__(self) -> "_WaitLog":
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop.set()
+        self._thread.join(timeout=1)
+
+    def _run(self) -> None:
+        while not self._stop.wait(self._interval):
+            elapsed = time.perf_counter() - self._started
+            _log(f"{self._message} ({elapsed:.0f}s elapsed, still waiting)")
 
 SYSTEM_PROMPT = """You are a highly precise clinical data extraction system.
 Extract the patient demographics, conditions, and medications from the clinical note.
@@ -33,11 +69,12 @@ def extract_clinical_data():
         print(f"[!] No parsed text files found in {TEXT_DIR}")
         return
 
-    print(f"[*] Starting deterministic extraction on {len(txt_files)} notes using {MODEL}...")
+    print(f"[*] Starting deterministic extraction on {len(txt_files)} notes using {MODEL}...", flush=True)
     
-    for txt_path in txt_files:
+    for index, txt_path in enumerate(txt_files, start=1):
         out_path = STRUCTURED_DIR / f"{txt_path.stem}.json"
         if out_path.exists():
+            _log(f"[{index}/{len(txt_files)}] skip {txt_path.name} (already extracted)")
             continue
             
         with open(txt_path, "r", encoding="utf-8") as f:
@@ -50,12 +87,18 @@ def extract_clinical_data():
         
         success = False
         for attempt in range(MAX_RETRIES):
+            _log(
+                f"[{index}/{len(txt_files)}] {txt_path.name} "
+                f"attempt {attempt + 1}/{MAX_RETRIES} ({len(clinical_text)} chars)"
+            )
             try:
-                response = client.chat.completions.create(
-                    model=MODEL,
-                    messages=messages,
-                    temperature=0.0  # Zero creativity, strict adherence
-                )
+                with _WaitLog(f"{txt_path.name}: Ollama is generating"):
+                    response = client.chat.completions.create(
+                        model=MODEL,
+                        messages=messages,
+                        temperature=0.0,
+                        max_tokens=MAX_TOKENS,
+                    )
                 raw_output = response.choices[0].message.content
                 
                 is_valid, result = validate_extraction(raw_output)
@@ -63,20 +106,20 @@ def extract_clinical_data():
                 if is_valid:
                     with open(out_path, "w", encoding="utf-8") as f:
                         json.dump(result.model_dump(), f, indent=2)
-                    print(f"  -> Extracted: {txt_path.name}")
+                    _log(f"  extracted {txt_path.name}")
                     success = True
                     break
                 else:
-                    print(f"  [!] Schema mismatch on {txt_path.name} (Attempt {attempt+1}). Looping DFA...")
+                    _log(f"  schema mismatch on {txt_path.name} (attempt {attempt + 1}). Retrying.")
                     messages.append({"role": "assistant", "content": raw_output})
                     messages.append({"role": "user", "content": result}) 
                     
             except Exception as e:
-                print(f"  [X] API Error on {txt_path.name}: {e}")
+                _log(f"  API error on {txt_path.name}: {e}")
                 break
         
         if not success:
-            print(f"  [X] Failed to extract {txt_path.name} after {MAX_RETRIES} attempts.")
+            _log(f"  failed {txt_path.name} after {MAX_RETRIES} attempts. Continuing.")
 
 if __name__ == "__main__":
     extract_clinical_data()
