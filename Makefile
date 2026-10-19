@@ -3,7 +3,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 UV   := uv run --project $(ROOT) python
 
-.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr
+.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr parse extract
 
 help:
 	@printf '%s\n' \
@@ -18,7 +18,10 @@ help:
 		'' \
 		'  make triage-pdfs      split data/02_triage/unstructured into single pages' \
 		'' \
-		'  make ocr              Surya OCR on atomic pages into data/03_ocr'
+		'  make ocr              Surya OCR on atomic pages into data/03_ocr' \
+		'  make parse             rebuild OCR JSON into reading-order plain text' \
+		'' \
+		'  make extract          extract clinical JSON from parsed notes via Ollama'
 
 data-synthea:
 	$(ROOT)/scripts/data_gen/run_synthea.sh
@@ -44,3 +47,9 @@ triage-pdfs:
 
 ocr:
 	PYTHONUNBUFFERED=1 LOGLEVEL=DEBUG $(UV) -m ehr_migration_engine.vision.surya_client
+
+parse:
+	uv run python -m src.ehr_migration_engine.vision.spatial_parser
+
+extract:
+	uv run python -m src.ehr_migration_engine.extraction.engine
