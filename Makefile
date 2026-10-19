@@ -3,7 +3,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 UV   := uv run --project $(ROOT) python
 
-.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr parse extract
+.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr parse extract workbench
 
 help:
 	@printf '%s\n' \
@@ -21,7 +21,9 @@ help:
 		'  make ocr              Surya OCR on atomic pages into data/03_ocr' \
 		'  make parse             rebuild OCR JSON into reading-order plain text' \
 		'' \
-		'  make extract          extract clinical JSON from parsed notes via Ollama'
+		'  make extract          extract clinical JSON from parsed notes via Ollama' \
+		'' \
+		'  make workbench        open the clinical migration workbench'
 
 data-synthea:
 	$(ROOT)/scripts/data_gen/run_synthea.sh
@@ -53,3 +55,6 @@ parse:
 
 extract:
 	uv run python -m src.ehr_migration_engine.extraction.engine
+
+workbench:
+	cd $(ROOT) && uv run streamlit run src/ehr_migration_engine/workbench/app.py

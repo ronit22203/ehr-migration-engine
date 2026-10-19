@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "beautifulsoup4>=4.12",
     "datasets>=5.1.0",
     "numpy>=2.4.6",
     "openai>=2.54.0",
@@ -18,8 +19,17 @@ dependencies = [
     "pymupdf>=1.28.2",
     "pypdf>=6.21.1",
     "reportlab>=5.0.1",
+    "streamlit>=1.40",
     "surya-ocr>=0.22.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [project.scripts]
 ehr-migration-engine = "ehr_migration_engine:main"
