@@ -6,6 +6,7 @@ from pathlib import Path
 
 from openai import OpenAI
 
+from .failures import clear_extraction_error, write_extraction_error
 from .state_machine import validate_extraction
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -86,7 +87,11 @@ def extract_clinical_data():
         ]
         
         success = False
+        attempts_used = 0
+        last_error_type = "schema"
+        last_message = "Extraction did not produce a schema-valid record."
         for attempt in range(MAX_RETRIES):
+            attempts_used = attempt + 1
             _log(
                 f"[{index}/{len(txt_files)}] {txt_path.name} "
                 f"attempt {attempt + 1}/{MAX_RETRIES} ({len(clinical_text)} chars)"
@@ -106,20 +111,33 @@ def extract_clinical_data():
                 if is_valid:
                     with open(out_path, "w", encoding="utf-8") as f:
                         json.dump(result.model_dump(), f, indent=2)
+                    clear_extraction_error(STRUCTURED_DIR, txt_path.stem)
                     _log(f"  extracted {txt_path.name}")
                     success = True
                     break
                 else:
+                    failure = str(result)
+                    last_error_type = "invalid_json" if failure.startswith("Invalid JSON") else "schema"
+                    last_message = failure
                     _log(f"  schema mismatch on {txt_path.name} (attempt {attempt + 1}). Retrying.")
                     messages.append({"role": "assistant", "content": raw_output})
                     messages.append({"role": "user", "content": result}) 
                     
             except Exception as e:
+                last_error_type = "api"
+                last_message = f"{type(e).__name__}: {e}"
                 _log(f"  API error on {txt_path.name}: {e}")
                 break
         
         if not success:
-            _log(f"  failed {txt_path.name} after {MAX_RETRIES} attempts. Continuing.")
+            write_extraction_error(
+                STRUCTURED_DIR,
+                txt_path.stem,
+                attempts_used,
+                last_error_type,
+                last_message,
+            )
+            _log(f"  failed {txt_path.name} after {attempts_used} attempts. Continuing.")
 
 if __name__ == "__main__":
     extract_clinical_data()
