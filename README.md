@@ -4,6 +4,10 @@ An electronic health record migration is a high-stakes extract, transform, and l
 
 The pipeline runs locally: Surya for layout-aware OCR, a local Qwen model served by vLLM for schema-bound extraction, and Neo4j for longitudinal GraphRAG. Nothing in the path is a free-form summary. Each stage emits a typed artifact the next stage can reject.
 
+`make workbench` opens the review UI for one fax page: the source document, the extracted conditions, and the packet they came from.
+
+![Migration workbench reviewing a laboratory fax](docs/workbench.png)
+
 ```mermaid
 flowchart LR
   raw["Raw drop"] --> triage["1. Ingestion and triage"]
