@@ -10,8 +10,8 @@ from PIL import Image, ImageDraw, ImageFont
 # Resolve from this file so faxes land in the repo data/ tree
 # even when the script is started from another directory.
 ROOT = Path(__file__).resolve().parents[2]
-INPUT_DIR = ROOT / "data" / "01_raw" / "mtsamples" / "text_files"
-OUTPUT_DIR = ROOT / "data" / "01_raw" / "faxes"
+INPUT_DIR = ROOT / "data" / "reference" / "synthetic" / "mtsamples" / "text_files"
+OUTPUT_DIR = ROOT / "data" / "reference" / "synthetic" / "faxes"
 
 # Page geometry (approx 150-200 DPI letter).
 PAGE_WIDTH = 1700

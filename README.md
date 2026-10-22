@@ -81,7 +81,8 @@ src/ehr_migration_engine/
 ├── graph/            # Neo4j client, encounter timeline
 └── fhir/             # FHIR resource serializer
 data/
-├── 01_raw/
+├── 01_raw/faxes/          # live drop
+├── reference/synthetic/   # Synthea, MTSamples, generated faxes
 ├── 02_triage/
 ├── 03_ocr/
 ├── 04_structured/
@@ -90,7 +91,7 @@ scripts/data_gen/     # Synthea, MTSamples, and dirty-fax generators
 tests/                # ingestion, spatial parsing, state machine, FHIR
 ```
 
-`data/01_raw/` is committed so a clone includes the synthetic Synthea charts, MTSamples notes, and fax PDFs. Later stages (`data/02_triage` through `data/05_fhir`) stay gitignored. Do not commit a real clinic drop into `data/01_raw/`.
+`data/01_raw/faxes/` is the live drop. The synthetic Synthea charts, MTSamples notes, and fax PDFs stay in `data/reference/synthetic/` for reference. Later stages (`data/02_triage` through `data/05_fhir`) stay gitignored. Do not commit a real clinic drop into `data/01_raw/`.
 
 ## Development
 
@@ -101,4 +102,4 @@ uv sync
 uv run ehr-migration-engine
 ```
 
-Synthetic source documents are produced from [`scripts/data_gen/`](scripts/data_gen/README.md). `make data-raw` fills `data/01_raw/` with Synthea charts, MTSamples notes, and degraded fax PDFs.
+Synthetic source documents are produced from [`scripts/data_gen/`](scripts/data_gen/README.md). `make data-raw` fills `data/reference/synthetic/` with Synthea charts, MTSamples notes, and degraded fax PDFs. `make data-run-raw` slices the live drop in `data/01_raw/faxes/`.

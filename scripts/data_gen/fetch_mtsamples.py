@@ -1,4 +1,4 @@
-"""Download MTSamples clinical notes into data/01_raw/mtsamples."""
+"""Download MTSamples clinical notes into data/reference/synthetic/mtsamples."""
 
 from pathlib import Path
 
@@ -8,7 +8,7 @@ from datasets import load_dataset
 # Resolve from this file so notes land in the repo data/ tree
 # even when the script is started from another directory.
 ROOT = Path(__file__).resolve().parents[2]
-RAW_DIR = ROOT / "data" / "01_raw" / "mtsamples"
+RAW_DIR = ROOT / "data" / "reference" / "synthetic" / "mtsamples"
 # Public copy of the MTSamples transcription table (specialty, sample name, transcription).
 DATASET_ID = "harishnair04/mtsamples"
 

@@ -9,9 +9,12 @@ wheels/
 # Virtual environments
 .venv
 
-# Later pipeline stages stay local. data/01_raw is the shared synthetic corpus.
+# Later pipeline stages stay local.
+# data/01_raw is the live document drop.
+# data/reference keeps the synthetic corpus.
 data/*
 !data/01_raw/
+!data/reference/
 
 # Downloaded by scripts/data_gen/run_synthea.sh
 scripts/data_gen/synthea-with-dependencies.jar

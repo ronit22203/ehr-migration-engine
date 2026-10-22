@@ -4,7 +4,7 @@ set -euo pipefail
 # Always resolve paths from this file, so the export lands in the repo
 # even when the script is started from another directory.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RAW_DIR="${ROOT}/data/01_raw/synthea"
+RAW_DIR="${ROOT}/data/reference/synthetic/synthea"
 JAR="${ROOT}/scripts/data_gen/synthea-with-dependencies.jar"
 
 mkdir -p "$RAW_DIR"

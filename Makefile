@@ -7,22 +7,20 @@ UV   := uv run --project $(ROOT) python
 
 help:
 	@printf '%s\n' \
-		'Populate data/01_raw/ with synthetic clinical records.' \
+		'Live documents land in data/01_raw/faxes.' \
+		'Synthetic generators write to data/reference/synthetic and do not touch that drop.' \
 		'' \
-		'  make data-synthea     10 Synthea patients (FHIR, CSV, CCDA)' \
-		'  make data-mtsamples   MTSamples notes (full CSV and 24 long text files)' \
-		'  make data-faxes       8 multi-page fax packets from those notes' \
+		'  make data-synthea     10 Synthea patients into data/reference/synthetic/synthea' \
+		'  make data-mtsamples   MTSamples notes into data/reference/synthetic/mtsamples' \
+		'  make data-faxes       8 fax packets into data/reference/synthetic/faxes' \
 		'  make data-notes       notes, then faxes' \
 		'  make data-raw         all three generators, in order' \
-		'  make data-run-raw     slice data/01_raw/faxes into single-page PDFs' \
 		'' \
+		'  make data-run-raw     copy data/01_raw/faxes into triage and split each page' \
 		'  make triage-pdfs      split data/02_triage/unstructured into single pages' \
-		'' \
 		'  make ocr              Surya OCR on atomic pages into data/03_ocr' \
-		'  make parse             rebuild OCR JSON into reading-order plain text' \
-		'' \
+		'  make parse            rebuild OCR JSON into reading-order plain text' \
 		'  make extract          extract clinical JSON from parsed notes via Ollama' \
-		'' \
 		'  make workbench        open the clinical migration workbench'
 
 data-synthea:
