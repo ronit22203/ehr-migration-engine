@@ -62,8 +62,19 @@ You MUST output strictly valid JSON conforming to this schema:
 }
 CRITICAL INSTRUCTIONS:
 1. Do NOT put lab results, vitals, or analytes into "conditions". They belong in "observations".
-2. Do not hallucinate flags for normal lab values.
-3. Do not output any markdown formatting, conversational text, or explanations. Return ONLY the JSON object.
+2. An H, L, High, or Low mark on a result row is the observation "flag". It is not a diagnosis and it is not a condition status.
+3. Do not invent a condition from a flagged row. "H 168.0" beside Triglyceride is not "High Triglycerides".
+4. Do not hallucinate flags for normal lab values. Leave "flag" null when the row has no H or L mark and the result sits inside the reference interval.
+5. Do not output any markdown formatting, conversational text, or explanations. Return ONLY the JSON object.
+
+EXAMPLE
+A lipid-profile row is one observation. Copy this shape for every analyte row in the note. Do not copy these numbers unless that row is on the page.
+
+Input row:
+| Triglyceride | H 168.0 | mg/dL | Normal : <150 |
+
+Output:
+{"patient_name": null, "age": null, "gender": null, "conditions": [], "medications": [], "observations": [{"test_name": "Triglyceride", "value": "168.0", "units": "mg/dL", "flag": "High"}]}
 """
 
 def extract_clinical_data():
