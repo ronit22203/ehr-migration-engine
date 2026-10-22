@@ -178,3 +178,59 @@ def test_corrected_patient_name_and_coded_medication_are_delivered() -> None:
     assert "page=1" in provenance["entity"][0]["what"]["identifier"]["value"]
     assert "block=4" in provenance["entity"][0]["what"]["identifier"]["value"]
     assert "Condition" not in _types(bundle)
+
+
+def test_accepted_lab_row_is_an_observation() -> None:
+    extraction = {
+        "patient_name": "Lyubochka Svetka",
+        "conditions": [{"diagnosis": "High Triglycerides", "status": "High"}],
+        "medications": [],
+        "observations": [
+            {"test_name": "Triglyceride", "value": "168.0", "units": "mg/dL", "flag": "High"},
+        ],
+    }
+    reviews = {
+        "observations[0].test_name": _entry(
+            field_path="observations[0].test_name",
+            original_value="Triglyceride",
+            code_system="http://loinc.org",
+            code="2571-8",
+            display="Triglyceride [Mass/volume] in Serum or Plasma",
+        )
+    }
+    links = [
+        ProvenanceLink(
+            field_path="observations[0].test_name",
+            value="Triglyceride",
+            resolved=True,
+            source_file=SOURCE,
+            page_number=3,
+            block_index=5,
+            reading_order=4,
+            block_text="Triglyceride H 168.0 mg/dL",
+            bbox=(1.0, 2.0, 3.0, 4.0),
+            confidence=0.9,
+            label="Table",
+        )
+    ]
+    bundle = build_bundle(
+        stem=STEM,
+        source_file=SOURCE,
+        page_number=3,
+        extraction=extraction,
+        facts=facts_from_extraction(extraction),
+        reviews=reviews,
+        links=links,
+    )
+    observation = next(
+        item["resource"] for item in bundle["entry"] if item["resource"]["resourceType"] == "Observation"
+    )
+    provenance = next(
+        item["resource"] for item in bundle["entry"] if item["resource"]["resourceType"] == "Provenance"
+    )
+
+    assert observation["code"]["coding"][0]["code"] == "2571-8"
+    assert observation["valueQuantity"] == {"value": 168.0, "unit": "mg/dL"}
+    assert observation["interpretation"][0]["coding"][0]["code"] == "H"
+    assert provenance["target"][0]["reference"] == f"Observation/{observation['id']}"
+    assert "Condition" not in _types(bundle)

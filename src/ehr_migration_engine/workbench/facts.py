@@ -11,6 +11,9 @@ class Fact:
     requires_code: bool
     dosage: str | None = None
     clinical_status: str | None = None
+    result: str | None = None
+    units: str | None = None
+    flag: str | None = None
 
 
 def facts_from_extraction(extraction: dict | None) -> list[Fact]:
@@ -63,6 +66,26 @@ def facts_from_extraction(extraction: dict | None) -> list[Fact]:
                     value=name,
                     requires_code=True,
                     dosage=_text(item.get("dosage")),
+                )
+            )
+
+    observations = extraction.get("observations")
+    if isinstance(observations, list):
+        for index, item in enumerate(observations):
+            if not isinstance(item, dict):
+                continue
+            test_name = _text(item.get("test_name"))
+            if not test_name:
+                continue
+            facts.append(
+                Fact(
+                    field_path=f"observations[{index}].test_name",
+                    kind="Observation",
+                    value=test_name,
+                    requires_code=True,
+                    result=_text(item.get("value")),
+                    units=_text(item.get("units")),
+                    flag=_text(item.get("flag")),
                 )
             )
 

@@ -61,6 +61,8 @@ def build_bundle(
             resources.append(_condition(resource_id, patient_id, fact, entry))
         elif fact.kind == "Medication":
             resources.append(_medication(resource_id, patient_id, fact, entry))
+        elif fact.kind == "Observation":
+            resources.append(_observation(resource_id, patient_id, fact, entry))
         else:
             continue
         provenance = _provenance(
@@ -117,6 +119,67 @@ def _condition(resource_id: str, patient_id: str, fact: Fact, entry: ReviewEntry
             ]
         }
     return resource
+
+
+def _observation(resource_id: str, patient_id: str, fact: Fact, entry: ReviewEntry) -> dict:
+    text = effective_value(fact.value, entry)
+    resource: dict = {
+        "resourceType": "Observation",
+        "id": resource_id,
+        "status": "final",
+        "code": _codeable(entry, text),
+        "subject": {"reference": f"Patient/{patient_id}"},
+    }
+    quantity = _quantity(fact.result, fact.units)
+    if quantity is not None:
+        resource["valueQuantity"] = quantity
+    elif fact.result:
+        resource["valueString"] = fact.result
+    interpretation = _interpretation(fact.flag)
+    if interpretation is not None:
+        resource["interpretation"] = [interpretation]
+    return resource
+
+
+_INTERPRETATION = {
+    "high": ("H", "High"),
+    "h": ("H", "High"),
+    "low": ("L", "Low"),
+    "l": ("L", "Low"),
+    "abnormal": ("A", "Abnormal"),
+}
+
+
+def _quantity(result: str | None, units: str | None) -> dict | None:
+    if not result:
+        return None
+    try:
+        number = float(result)
+    except ValueError:
+        return None
+    payload: dict = {"value": number}
+    if units:
+        payload["unit"] = units
+    return payload
+
+
+def _interpretation(flag: str | None) -> dict | None:
+    if not flag:
+        return None
+    mapped = _INTERPRETATION.get(flag.casefold())
+    if mapped is None:
+        return {"text": flag}
+    code, display = mapped
+    return {
+        "coding": [
+            {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "code": code,
+                "display": display,
+            }
+        ],
+        "text": display,
+    }
 
 
 def _medication(resource_id: str, patient_id: str, fact: Fact, entry: ReviewEntry) -> dict:
@@ -182,6 +245,8 @@ def _resource_type(fact: Fact) -> str:
         return "Condition"
     if fact.kind == "Medication":
         return "MedicationStatement"
+    if fact.kind == "Observation":
+        return "Observation"
     return "Patient"
 
 
