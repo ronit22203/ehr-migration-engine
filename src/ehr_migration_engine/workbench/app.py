@@ -1,6 +1,7 @@
 """Clinical migration workbench. Reads pipeline artifacts; does not rerun the pipeline."""
 
 import html
+import importlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,7 +16,7 @@ from ehr_migration_engine.workbench.provenance import ProvenanceLink, link_facts
 from ehr_migration_engine.workbench.render import render_page_png
 from ehr_migration_engine.workbench.review import ReviewEntry, ReviewLedger, effective_value
 from ehr_migration_engine.workbench.status import PageFlags, matches_filter, page_flags, summarize
-from ehr_migration_engine.workbench.theme import CSS
+from ehr_migration_engine.workbench import theme as workbench_theme
 
 STAGES = (
     "Overview",
@@ -67,7 +68,8 @@ class Selection:
 
 def main() -> None:
     st.set_page_config(page_title="Migration workbench", layout="wide", initial_sidebar_state="collapsed")
-    st.markdown(CSS, unsafe_allow_html=True)
+    importlib.reload(workbench_theme)
+    st.markdown(workbench_theme.CSS, unsafe_allow_html=True)
     _init_state()
 
     layout = layout_for()
@@ -143,7 +145,14 @@ def _header(batch_id: str) -> None:
             unsafe_allow_html=True,
         )
     with stages:
-        st.radio("Stage", STAGES, horizontal=True, key="stage", on_change=_sync_stage)
+        st.radio(
+            "Stage",
+            STAGES,
+            horizontal=True,
+            key="stage",
+            on_change=_sync_stage,
+            label_visibility="collapsed",
+        )
 
 
 def _sync_stage() -> None:
@@ -151,12 +160,12 @@ def _sync_stage() -> None:
 
 
 def _explorer(catalog: BatchCatalog, flags: dict[str, PageFlags]) -> None:
-    st.markdown("<p class='wb-kicker'>Explorer</p>", unsafe_allow_html=True)
+    st.markdown("<p class='wb-kicker wb-pane'>Explorer</p>", unsafe_allow_html=True)
     st.radio("Filter", FILTERS, horizontal=True, key="explorer_filter", label_visibility="collapsed")
     selected_filter = st.session_state.explorer_filter
     if not catalog.packets:
-        st.caption("No fax packets in data/01_raw/faxes.")
-        st.code("make data-faxes", language="bash")
+        st.caption("No fax packets in data/01_raw/faxes. Add a PDF there, then split it.")
+        st.code("make data-run-raw", language="bash")
         return
 
     visible = False
@@ -197,6 +206,7 @@ def _select_page(stem: str) -> None:
 
 
 def _center(selection: Selection, root: Path) -> None:
+    st.markdown("<div class='wb-pane wb-center'></div>", unsafe_allow_html=True)
     stage = st.session_state.stage
     page = selection.page
     if page is not None:
@@ -241,7 +251,7 @@ def _overview(root: Path) -> None:
     counts = summarize(catalog, facts_by_stem, reviews_by_stem)
     st.markdown("**Batch**")
     st.caption("Counts come from files on disk and the review ledger.")
-    st.dataframe(
+    _table(
         [
             {"measure": "Packets", "count": counts.packets},
             {"measure": "Pages", "count": counts.pages},
@@ -250,9 +260,7 @@ def _overview(root: Path) -> None:
             {"measure": "Extraction failures", "count": counts.failures},
             {"measure": "Facts pending review", "count": counts.pending_facts},
             {"measure": "Facts accepted", "count": counts.accepted_facts},
-        ],
-        hide_index=True,
-        height=300,
+        ]
     )
 
 
@@ -304,15 +312,18 @@ def _ocr_view(selection: Selection) -> None:
     matched = selection.link.block_index if selection.link and selection.link.resolved else None
     indexed = [(index, block) for index, block in enumerate(blocks) if isinstance(block, dict)]
     indexed.sort(key=lambda item: item[1].get("reading_order", 9999))
-    shown = False
+    parts: list[str] = []
     for index, block in indexed:
-        if index == matched:
-            st.caption(f"Matched block {index}")
         text = _plain_block(block)
-        if text:
-            shown = True
-            st.code(text, language=None)
-    if not shown:
+        if not text:
+            continue
+        label = f"block {index}"
+        if index == matched:
+            label += " · matched"
+        parts.append(f"{label}\n{text}")
+    if parts:
+        st.code("\n\n".join(parts), language=None)
+    else:
         parsed = _parsed_text(page)
         st.code(parsed or "OCR file has no text.", language=None)
 
@@ -334,7 +345,7 @@ def _json_view(selection: Selection, root: Path) -> None:
 
 def _fhir_view(selection: Selection) -> None:
     st.caption(
-        "A fact appears here after it is accepted. Conditions and medications also need a code. "
+        "A fact appears here after it is accepted. Conditions, medications, and lab observations also need a code. "
         "This preview is not sent to a target EHR."
     )
     bundle = _bundle(selection)
@@ -343,7 +354,7 @@ def _fhir_view(selection: Selection) -> None:
 
 def _inspector(selection: Selection, ledger: ReviewLedger) -> bool:
     """Draw the inspector. Return True when a review was written and the app should reload."""
-    st.markdown("<p class='wb-kicker'>Inspector</p>", unsafe_allow_html=True)
+    st.markdown("<p class='wb-kicker wb-pane'>Inspector</p>", unsafe_allow_html=True)
     page = selection.page
     if page is None:
         st.caption("No page selected.")
@@ -364,7 +375,7 @@ def _inspector(selection: Selection, ledger: ReviewLedger) -> bool:
     if not selection.facts:
         rows = _check_rows(page, None, None, None)
         _draw_checks(rows)
-        st.caption("No demographics, conditions, or medications were extracted.")
+        st.caption("No demographics, conditions, medications, or lab observations were extracted.")
         return False
 
     for fact in selection.facts:
@@ -390,6 +401,11 @@ def _inspector(selection: Selection, ledger: ReviewLedger) -> bool:
         st.code(entry.revised_value, language=None)
     if fact.dosage:
         st.caption(f"Dosage {fact.dosage}")
+    if fact.result:
+        result = f"{fact.result} {fact.units}".strip() if fact.units else fact.result
+        st.caption(f"Result {result}")
+    if fact.flag:
+        st.caption(f"Flag {fact.flag}")
     if fact.clinical_status:
         st.caption(f"Clinical status {fact.clinical_status}")
     if entry and entry.code:
@@ -437,7 +453,7 @@ def _review_form(selection: Selection, ledger: ReviewLedger) -> bool:
         reason = st.text_input("Reason")
         system = code = display = ""
         if fact.requires_code:
-            system = st.text_input("Code system", placeholder="http://snomed.info/sct")
+            system = st.text_input("Code system", placeholder=_code_system_placeholder(fact.kind))
             code = st.text_input("Code")
             display = st.text_input("Display")
         accept, reject, correct = st.columns(3)
@@ -491,7 +507,7 @@ def _validate_action(
         return "A correction needs a revised value and a reason."
     coded = bool(system_text or code_text or display_text)
     if fact.requires_code and accepted and not (system_text and code_text and display_text):
-        return "A condition or medication needs a code system, code, and display before it can be accepted."
+        return "This record needs a code system, code, and display before it can be accepted."
     if corrected and coded and not (system_text and code_text and display_text):
         return "A code needs a system, code, and display."
     return None
@@ -536,12 +552,12 @@ def _console(
                 )
         st.caption("Stage coverage")
         if rows:
-            st.dataframe(rows, hide_index=True, height=220)
+            _table(rows, height=220)
         else:
             st.caption("No pages yet.")
         st.caption("Extraction failures")
         if failures:
-            st.dataframe(failures, hide_index=True, height=180)
+            _table(failures, height=180)
         else:
             st.caption("No extraction failures.")
         st.caption("Review ledger")
@@ -555,7 +571,7 @@ def _console(
             for entry in ledger.entries()[-30:]
         ]
         if events:
-            st.dataframe(events, hide_index=True, height=180)
+            _table(events, height=180)
         else:
             st.caption("No review actions yet.")
 
@@ -615,9 +631,39 @@ def _bundle(selection: Selection) -> dict:
     )
 
 
+def _table(rows: list[dict], height: int | None = None) -> None:
+    """HTML table so the grid stays black on white. The dataframe canvas ignores CSS."""
+    if not rows:
+        return
+    columns = list(rows[0])
+    head = "".join(f"<th>{html.escape(str(column))}</th>" for column in columns)
+    body = []
+    for row in rows:
+        cells = "".join(f"<td>{html.escape(str(row.get(column, '')))}</td>" for column in columns)
+        body.append(f"<tr>{cells}</tr>")
+    style = f" style='max-height:{height}px'" if height else ""
+    st.markdown(
+        f"<div class='wb-table'{style}><table><thead><tr>{head}</tr></thead>"
+        f"<tbody>{''.join(body)}</tbody></table></div>",
+        unsafe_allow_html=True,
+    )
+
+
 def _fact_label(fact: Fact) -> str:
-    value = fact.value if len(fact.value) <= 72 else fact.value[:69] + "..."
-    return f"{fact.kind}  {value}"
+    shown = fact.value
+    if fact.kind == "Observation" and fact.result:
+        shown = " ".join(part for part in (fact.value, fact.result, fact.units, fact.flag) if part)
+    if len(shown) > 72:
+        shown = shown[:69] + "..."
+    return f"{fact.kind}  {shown}"
+
+
+def _code_system_placeholder(kind: str) -> str:
+    if kind == "Medication":
+        return "http://www.nlm.nih.gov/research/umls/rxnorm"
+    if kind == "Observation":
+        return "http://loinc.org"
+    return "http://snomed.info/sct"
 
 
 def _source_name(page: PageArtifacts, ocr: dict | None) -> str | None:
