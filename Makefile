@@ -3,7 +3,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 UV   := uv run --project $(ROOT) python
 
-.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr parse extract workbench
+.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr parse extract normalize graph fhir workbench clean-ocr clean-extract clean-normalize clean
 
 help:
 	@printf '%s\n' \
@@ -20,8 +20,16 @@ help:
 		'  make triage-pdfs      split data/02_triage/unstructured into single pages' \
 		'  make ocr              Surya OCR on atomic pages into data/03_ocr' \
 		'  make parse            rebuild OCR JSON into reading-order plain text' \
-		'  make extract          extract clinical JSON from parsed notes via Ollama' \
-		'  make workbench        open the clinical migration workbench'
+		'  make extract          parse OCR JSON, then extract clinical JSON via Ollama' \
+		'  make normalize        code conditions, medications, and labs into data/04_normalized' \
+		'  make graph             load data/04_normalized into local Neo4j' \
+		'  make fhir              write FHIR R4 transaction bundles to data/05_fhir' \
+		'  make workbench        open the clinical migration workbench' \
+		'' \
+		'  make clean-ocr        delete data/03_ocr (Surya JSON and parsed text)' \
+		'  make clean-extract    delete data/04_structured (clinical JSON and errors)' \
+		'  make clean-normalize  delete data/04_normalized' \
+		'  make clean            delete OCR, extraction, and normalization output'
 
 data-synthea:
 	$(ROOT)/scripts/data_gen/run_synthea.sh
@@ -51,8 +59,28 @@ ocr:
 parse:
 	uv run python -m src.ehr_migration_engine.vision.spatial_parser
 
-extract:
+extract: parse
 	uv run python -m src.ehr_migration_engine.extraction.engine
+
+normalize:
+	uv run python -m ehr_migration_engine.normalization.batch_normalize
+
+graph:
+	uv run python -m src.ehr_migration_engine.graph.timeline
+
+fhir:
+	uv run python -m src.ehr_migration_engine.fhir.serializer
 
 workbench:
 	cd $(ROOT) && uv run streamlit run src/ehr_migration_engine/workbench/app.py
+
+clean-ocr:
+	rm -rf $(ROOT)/data/03_ocr
+
+clean-extract:
+	rm -rf $(ROOT)/data/04_structured
+
+clean-normalize:
+	rm -rf $(ROOT)/data/04_normalized
+
+clean: clean-ocr clean-extract clean-normalize

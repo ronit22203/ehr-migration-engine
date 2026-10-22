@@ -11,14 +11,34 @@ CSS = """
 .block-container { padding-top: 0.85rem; padding-bottom: 0.25rem; max-width: 100%; }
 [data-testid="stVerticalBlock"] { gap: 0.4rem; }
 
+/* The stage row sits beside the title. Keep it in its own band so it cannot
+   paint across the panes underneath. */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"]:first-child {
+  margin-bottom: 0.55rem;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  background: #ffffff;
+}
+
 [data-testid="stColumn"]:has(.wb-pane) {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 0.45rem 0.65rem 0.55rem;
-  height: calc(100vh - 8.25rem);
+  height: calc(100vh - 9.4rem);
   overflow-y: auto;
   align-self: start;
+}
+/* Streamlit's column is a fixed-height flex column, so the pane kicker was
+   shrinking to 0 and the next control slid up underneath it. */
+[data-testid="stColumn"]:has(.wb-pane) [data-testid="stVerticalBlock"] {
+  height: auto !important;
+  flex: 0 0 auto !important;
+}
+[data-testid="stColumn"]:has(.wb-pane) [data-testid="stElementContainer"] {
+  flex-shrink: 0;
+  min-height: min-content;
 }
 [data-testid="stColumn"]:has(.wb-pane) button {
   min-height: 1.65rem;
@@ -30,6 +50,14 @@ CSS = """
   max-height: calc(100vh - 13rem);
   width: auto !important;
   max-width: 100%;
+}
+
+/* Streamlit pulls the markdown box up by 1rem to cancel a paragraph margin.
+   These labels already have no margin, so that pull collapses the line onto
+   the control underneath. */
+[data-testid="stMarkdown"]:has(.wb-kicker) [data-testid="stMarkdownContainer"],
+[data-testid="stMarkdown"]:has(.wb-title) [data-testid="stMarkdownContainer"] {
+  margin-bottom: 0 !important;
 }
 
 .stMarkdown p.wb-kicker {

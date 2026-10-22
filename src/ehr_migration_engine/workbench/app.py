@@ -8,9 +8,9 @@ from pathlib import Path
 
 import streamlit as st
 
+from ehr_migration_engine.graph.timeline import ClinicalGraph
 from ehr_migration_engine.workbench.catalog import BatchCatalog, PageArtifacts, load_catalog
 from ehr_migration_engine.workbench.facts import Fact, facts_from_extraction
-from ehr_migration_engine.workbench.fhir_preview import build_bundle
 from ehr_migration_engine.workbench.paths import layout_for, read_json
 from ehr_migration_engine.workbench.provenance import ProvenanceLink, link_facts, source_frame
 from ehr_migration_engine.workbench.render import render_page_png
@@ -218,11 +218,7 @@ def _center(selection: Selection, root: Path) -> None:
         _overview(root)
         return
     if stage == "Patient Timeline":
-        st.markdown("**Patient timeline**")
-        st.caption(
-            "Longitudinal graph mapping is not in this build. "
-            "Encounter chronology and duplicate-patient review land here once the Neo4j timeline exists."
-        )
+        _patient_timeline(selection)
         return
     if page is None:
         st.caption("Select a page in the explorer.")
@@ -238,7 +234,62 @@ def _center(selection: Selection, root: Path) -> None:
     elif view == "Clinical JSON":
         _json_view(selection, root)
     else:
-        _fhir_view(selection)
+        _fhir_view(selection, root)
+
+
+def _patient_timeline(selection: Selection) -> None:
+    st.markdown("**Patient timeline**")
+    name = _patient_name(selection)
+    if not name:
+        st.caption("This page has no patient name. Select a page that extracted one.")
+        return
+    st.caption(name)
+    graph = None
+    try:
+        graph = ClinicalGraph()
+        graph.driver.verify_connectivity()
+        pages = graph.patient_timeline(name)
+    except Exception as exc:
+        st.caption(f"Neo4j is not available. {exc}")
+        st.code("docker compose up -d && make graph", language="bash")
+        return
+    finally:
+        if graph is not None:
+            graph.close()
+    if not pages:
+        st.caption("No documents for this patient are in the graph yet.")
+        st.code("make graph", language="bash")
+        return
+    for page in pages:
+        st.markdown(f"**{html.escape(str(page['document']))}**", unsafe_allow_html=True)
+        _timeline_rows("Condition", page["conditions"], ("raw", "display", "code", "status"))
+        _timeline_rows("Observation", page["observations"], ("raw", "value", "units", "flag", "code"))
+        _timeline_rows("Medication", page["medications"], ("raw", "display", "dosage", "code"))
+
+
+def _patient_name(selection: Selection) -> str | None:
+    extraction = selection.extraction
+    if not isinstance(extraction, dict):
+        return None
+    name = extraction.get("patient_name")
+    if not isinstance(name, str):
+        return None
+    text = name.strip()
+    return text or None
+
+
+def _timeline_rows(kind: str, items: list[dict], columns: tuple[str, ...]) -> None:
+    rows = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        row = {column: item.get(column) or "" for column in columns}
+        if any(row.values()):
+            rows.append(row)
+    if not rows:
+        return
+    st.caption(kind)
+    _table(rows)
 
 
 def _overview(root: Path) -> None:
@@ -343,12 +394,27 @@ def _json_view(selection: Selection, root: Path) -> None:
     st.code("make extract", language="bash")
 
 
-def _fhir_view(selection: Selection) -> None:
-    st.caption(
-        "A fact appears here after it is accepted. Conditions, medications, and lab observations also need a code. "
-        "This preview is not sent to a target EHR."
-    )
-    bundle = _bundle(selection)
+def _fhir_view(selection: Selection, root: Path) -> None:
+    page = selection.page
+    assert page is not None
+    path = layout_for(root).fhir / f"{page.stem}.json"
+    bundle = _json_for(path)
+    if not isinstance(bundle, dict):
+        st.caption("FHIR serialization has not been run for this page.")
+        st.code("make fhir", language="bash")
+        return
+    entries = bundle.get("entry")
+    count = len(entries) if isinstance(entries, list) else 0
+    kinds = []
+    if isinstance(entries, list):
+        for item in entries:
+            resource = item.get("resource") if isinstance(item, dict) else None
+            if isinstance(resource, dict) and isinstance(resource.get("resourceType"), str):
+                kinds.append(resource["resourceType"])
+    summary = ", ".join(f"{kinds.count(kind)} {kind}" for kind in dict.fromkeys(kinds))
+    st.caption(f"{_rel(path, root)} · {bundle.get('type', 'bundle')} · {count} resources")
+    if summary:
+        st.caption(summary)
     st.code(json.dumps(bundle, indent=2), language="json")
 
 
@@ -614,21 +680,6 @@ def _draw_checks(rows: list[tuple[str, str]]) -> None:
             "</div>",
             unsafe_allow_html=True,
         )
-
-
-def _bundle(selection: Selection) -> dict:
-    page = selection.page
-    assert page is not None
-    source = page.atomic_pdf.name if page.atomic_pdf else None
-    return build_bundle(
-        stem=page.stem,
-        source_file=source,
-        page_number=page.page_number or None,
-        extraction=selection.extraction,
-        facts=selection.facts,
-        reviews=selection.reviews,
-        links=selection.links,
-    )
 
 
 def _table(rows: list[dict], height: int | None = None) -> None:

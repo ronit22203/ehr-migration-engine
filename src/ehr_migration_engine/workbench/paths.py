@@ -33,6 +33,10 @@ class DataLayout:
         return self.root / "data" / "04_structured"
 
     @property
+    def fhir(self) -> Path:
+        return self.root / "data" / "05_fhir"
+
+    @property
     def ledger(self) -> Path:
         return self.root / "data" / "06_review" / "ledger.jsonl"
 
