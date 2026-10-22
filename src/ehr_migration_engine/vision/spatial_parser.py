@@ -8,11 +8,26 @@ OCR_DIR = ROOT / "data" / "03_ocr"
 TEXT_DIR = OCR_DIR / "parsed_text"
 
 
-def clean_html_to_text(html_content: str) -> str:
-    """Strip HTML tags and return clean text."""
+def clean_html_to_text(html_content: str, label: str = "") -> str:
+    """Strip HTML tags, converting tables to Markdown so columns stay aligned."""
     if not html_content:
         return ""
+
     soup = BeautifulSoup(html_content, "html.parser")
+
+    # Surya puts detected tables in an html <table>, often labeled "Table".
+    if label == "Table" or soup.find("table"):
+        rows: list[str] = []
+        for tr in soup.find_all("tr"):
+            cells = [td.get_text(separator=" ", strip=True) for td in tr.find_all(["td", "th"])]
+            rows.append("| " + " | ".join(cells) + " |")
+
+        if rows:
+            col_count = max(len(rows[0].split("|")) - 2, 1)
+            separator = "| " + " | ".join(["---"] * col_count) + " |"
+            rows.insert(1, separator)
+            return "\n".join(rows)
+
     return soup.get_text(separator="\n").strip()
 
 
@@ -37,7 +52,7 @@ def reconstruct_documents() -> None:
 
         page_text_blocks = []
         for block in blocks:
-            clean_text = clean_html_to_text(block.get("html", ""))
+            clean_text = clean_html_to_text(block.get("html", ""), block.get("label", ""))
             if clean_text:
                 page_text_blocks.append(clean_text)
 
