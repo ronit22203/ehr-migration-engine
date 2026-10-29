@@ -84,3 +84,58 @@ def test_missing_fhir_bundle_is_reported(client: TestClient) -> None:
 def test_unknown_page_returns_404(client: TestClient) -> None:
     response = client.get("/api/pages/missing_page")
     assert response.status_code == 404
+
+
+def test_upload_and_delete_fax(client: TestClient, tmp_path: Path) -> None:
+    prior = tmp_path / "data" / "01_raw" / "faxes" / "packet_001_scanned.pdf"
+    prior_atomic = tmp_path / "data" / "02_triage" / "atomic_pages" / "packet_001_scanned_page_001.pdf"
+    assert prior.is_file()
+    assert prior_atomic.is_file()
+
+    response = client.post(
+        "/api/faxes",
+        files={"file": ("Clinic Note.pdf", b"%PDF-1.4 demo", "application/pdf")},
+    )
+    assert response.status_code == 200
+    fax = response.json()["fax"]
+    assert fax["filename"] == "Clinic-Note.pdf"
+    assert fax["cleared"] >= 1
+    assert (tmp_path / "data" / "01_raw" / "faxes" / "Clinic-Note.pdf").is_file()
+    # Upload replaces the drop: prior packets and their derived pages go away.
+    assert not prior.is_file()
+    assert not prior_atomic.is_file()
+
+    listed = client.get("/api/faxes").json()["faxes"]
+    assert [item["stem"] for item in listed] == ["Clinic-Note"]
+
+    deleted = client.delete("/api/faxes/Clinic-Note")
+    assert deleted.status_code == 200
+    assert deleted.json()["count"] >= 1
+    assert not (tmp_path / "data" / "01_raw" / "faxes" / "Clinic-Note.pdf").is_file()
+
+
+def test_delete_packet_removes_derived_pages(client: TestClient, tmp_path: Path) -> None:
+    atomic = tmp_path / "data" / "02_triage" / "atomic_pages" / "packet_001_scanned_page_001.pdf"
+    assert atomic.is_file()
+
+    response = client.delete("/api/faxes/packet_001_scanned")
+    assert response.status_code == 200
+    assert response.json()["count"] >= 2
+    assert not atomic.is_file()
+    assert not (tmp_path / "data" / "01_raw" / "faxes" / "packet_001_scanned.pdf").is_file()
+
+
+def test_pipeline_actions_are_listed(client: TestClient) -> None:
+    payload = client.get("/api/pipeline/actions").json()
+    ids = {action["id"] for action in payload["actions"]}
+    assert {"data-run-raw", "ocr", "extract", "normalize", "fhir", "clean"}.issubset(ids)
+
+
+def test_pipeline_rejects_unknown_action(client: TestClient) -> None:
+    response = client.post("/api/pipeline/run", json={"action": "not-a-target"})
+    assert response.status_code == 400
+
+
+def test_pipeline_kill_with_no_job_returns_409(client: TestClient) -> None:
+    response = client.post("/api/pipeline/kill")
+    assert response.status_code == 409

@@ -3,7 +3,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 UV   := uv run --project $(ROOT) python
 
-.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-ucsf data-pathlabs data-cms-onc data-real data-run-raw triage-pdfs ocr parse extract normalize graph fhir workbench workbench-ui clean-ocr clean-extract clean-normalize clean
+.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-ucsf data-pathlabs data-cms-onc data-real data-run-raw triage-pdfs ocr parse extract normalize graph fhir workbench workbench-ui kill-pipeline clean-ocr clean-extract clean-normalize clean
 
 help:
 	@printf '%s\n' \
@@ -32,6 +32,7 @@ help:
 		'  make fhir              write FHIR R4 transaction bundles to data/05_fhir' \
 		'  make workbench-ui     build the Blueprint.js workbench frontend' \
 		'  make workbench        serve the workbench API (and built UI) on :8501' \
+		'  make kill-pipeline    stop running OCR/extract/normalize/etc. workers' \
 		'' \
 		'  make clean-ocr        delete data/03_ocr (Surya JSON and parsed text)' \
 		'  make clean-extract    delete data/04_structured (clinical JSON and errors)' \
@@ -94,6 +95,12 @@ workbench-ui:
 
 workbench:
 	cd $(ROOT) && uv run uvicorn ehr_migration_engine.workbench.api:app --reload --host 127.0.0.1 --port 8501
+
+kill-pipeline:
+	@printf 'Stopping pipeline workers...\n'
+	@-pkill -f 'make (ocr|extract|parse|normalize|graph|fhir|data-run-raw|triage-pdfs)$$' >/dev/null 2>&1 || true
+	@-pkill -f 'ehr_migration_engine\.(vision\.surya_client|vision\.spatial_parser|extraction\.engine|ingestion\.pdf_handler|normalization\.batch_normalize|graph\.timeline|fhir\.serializer)' >/dev/null 2>&1 || true
+	@printf 'Done (no matching processes is OK).\n'
 
 clean-ocr:
 	rm -rf $(ROOT)/data/03_ocr

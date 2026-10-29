@@ -78,16 +78,74 @@ body {
   font-size: 0.85rem;
 }
 
+.wb-upload-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.65rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px dashed #94a3b8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.wb-upload-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: #0f172a;
+}
+
+.wb-upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wb-upload-button:hover {
+  background: #1e293b;
+}
+
+.wb-upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
 .wb-packet {
   margin-top: 0.65rem;
 }
 
+.wb-packet-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  margin-bottom: 0.35rem;
+}
+
 .wb-packet-title {
+  flex: 1;
   font-size: 0.8rem;
   font-weight: 600;
   color: #0f172a;
-  margin-bottom: 0.35rem;
   word-break: break-all;
+}
+
+.wb-error {
+  color: #b91c1c;
+  font-size: 0.8rem;
+  margin: 0.25rem 0;
 }
 
 .wb-page-button {
@@ -167,6 +225,46 @@ body {
 
 .wb-console-body {
   padding: 0.5rem 0 0.75rem;
+}
+
+.wb-console-tag {
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.wb-pipeline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.55rem;
+}
+
+.wb-pipeline-callout {
+  margin: 0.4rem 0;
+}
+
+.wb-pipeline-log-wrap {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.wb-pipeline-log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.wb-pipeline-log-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wb-pipeline-log {
+  max-height: 220px;
 }
 
 .wb-loading {

@@ -65,22 +65,46 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const applyBatchSelection = useCallback((data: BatchResponse, preferred?: string | null) => {
+    const pageStems = new Set(data.packets.flatMap((packet) => packet.pages.map((page) => page.stem)))
+    const first = data.packets.flatMap((packet) => packet.pages)[0]?.stem ?? null
+    setStem((current) => {
+      const candidate = preferred === undefined ? current : preferred
+      if (candidate && pageStems.has(candidate)) return candidate
+      return first
+    })
+    if (!first && !(preferred && pageStems.has(preferred))) {
+      setField(null)
+      setPage(null)
+    }
+  }, [])
+
   const reloadBatch = useCallback(async () => {
     const data = await fetchBatch()
     setBatch(data)
-    if (!stem) {
-      const first = data.packets.flatMap((packet) => packet.pages)[0]
-      if (first) setStem(first.stem)
-    }
-  }, [stem])
+    applyBatchSelection(data)
+    return data
+  }, [applyBatchSelection])
 
   const reloadPage = useCallback(async () => {
     if (!stem) {
       setPage(null)
       return
     }
-    const detail = await fetchPage(stem, field)
-    setPage(detail)
+    try {
+      const detail = await fetchPage(stem, field)
+      setPage(detail)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      // Stale URL stems (removed faxes) should not keep spinning forever.
+      if (/unknown page|404/i.test(message)) {
+        setStem(null)
+        setField(null)
+        setPage(null)
+        return
+      }
+      throw err
+    }
   }, [stem, field])
 
   useEffect(() => {
@@ -165,6 +189,11 @@ export default function App() {
                 selectedStem={stem}
                 onFilter={setFilter}
                 onSelect={selectPage}
+                onChanged={async () => {
+                  const data = await fetchBatch()
+                  setBatch(data)
+                  applyBatchSelection(data, null)
+                }}
               />
             </aside>
             <main className="wb-center">
@@ -178,7 +207,11 @@ export default function App() {
               ) : stage === 'Patient Timeline' ? (
                 <PatientTimeline patientName={page?.patient_name ?? null} />
               ) : !stem ? (
-                <p className={Classes.TEXT_MUTED}>Select a page in the explorer.</p>
+                <p className={Classes.TEXT_MUTED}>
+                  {batch.packets.length
+                    ? 'Upload is ready. Select a split page, or run Split drop for this PDF.'
+                    : 'Upload a fax PDF in the explorer, then run Split drop.'}
+                </p>
               ) : (
                 <>
                   {VIEWER_STAGES.has(stage) ? (
@@ -220,7 +253,13 @@ export default function App() {
               />
             </aside>
           </div>
-          <PipelineConsole batch={batch} />
+          <PipelineConsole
+            batch={batch}
+            onPipelineFinished={async () => {
+              await reloadBatch()
+              await reloadPage()
+            }}
+          />
         </>
       ) : null}
     </div>

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import unquote
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from ehr_migration_engine.graph.timeline import ClinicalGraph
 from ehr_migration_engine.workbench.catalog import BatchCatalog, PageArtifacts, load_catalog
 from ehr_migration_engine.workbench.facts import Fact, facts_from_extraction
+from ehr_migration_engine.workbench import fax_drop, pipeline_jobs
 from ehr_migration_engine.workbench.paths import PROJECT_ROOT, layout_for, read_json
 from ehr_migration_engine.workbench.provenance import ProvenanceLink, link_facts, source_frame
 from ehr_migration_engine.workbench.render import render_page_png
@@ -489,6 +490,74 @@ def post_review(stem: str, body: ReviewBody) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "entry": _entry_dict(entry)}
+
+
+@app.get("/api/faxes")
+def get_faxes() -> dict[str, Any]:
+    return {"faxes": fax_drop.list_faxes(_root())}
+
+
+@app.post("/api/faxes")
+async def post_fax(file: UploadFile = File(...)) -> dict[str, Any]:
+    filename = file.filename or "upload.pdf"
+    data = await file.read()
+    try:
+        saved = fax_drop.save_upload(filename, data, _root())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "fax": saved}
+
+
+@app.delete("/api/faxes/{stem}")
+def delete_fax(stem: str) -> dict[str, Any]:
+    try:
+        result = fax_drop.delete_packet(stem, _root())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if result["count"] == 0:
+        raise HTTPException(status_code=404, detail=f"No files found for packet: {stem}")
+    return {"ok": True, **result}
+
+
+@app.delete("/api/faxes")
+def delete_all_faxes() -> dict[str, Any]:
+    result = fax_drop.delete_all_packets(_root())
+    return {"ok": True, **result}
+
+
+@app.get("/api/pipeline/actions")
+def get_pipeline_actions() -> dict[str, Any]:
+    return {"actions": pipeline_jobs.list_actions()}
+
+
+@app.get("/api/pipeline/status")
+def get_pipeline_status() -> dict[str, Any]:
+    return pipeline_jobs.job_status()
+
+
+class PipelineStartBody(BaseModel):
+    action: str
+
+
+@app.post("/api/pipeline/run")
+def post_pipeline_run(body: PipelineStartBody) -> dict[str, Any]:
+    # Make always runs against the repo Makefile (targets use Makefile ROOT).
+    try:
+        return pipeline_jobs.start_job(body.action, root=PROJECT_ROOT)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/pipeline/kill")
+def post_pipeline_kill() -> dict[str, Any]:
+    try:
+        return pipeline_jobs.kill_job(root=PROJECT_ROOT)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 if UI_DIST.is_dir():

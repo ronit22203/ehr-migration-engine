@@ -109,3 +109,21 @@ export interface TimelineResponse {
   error: string | null
   hint: string | null
 }
+
+export interface PipelineAction {
+  id: string
+  label: string
+  description: string
+  make: string
+}
+
+export interface PipelineJobStatus {
+  action: string
+  label: string
+  status: 'idle' | 'running' | 'succeeded' | 'failed' | 'cancelled' | string
+  started_at: number | null
+  finished_at: number | null
+  returncode: number | null
+  log: string
+  error: string | null
+}
