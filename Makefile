@@ -3,18 +3,24 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 UV   := uv run --project $(ROOT) python
 
-.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr parse extract normalize graph fhir workbench workbench-ui clean-ocr clean-extract clean-normalize clean
+.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-ucsf data-pathlabs data-cms-onc data-real data-run-raw triage-pdfs ocr parse extract normalize graph fhir workbench workbench-ui clean-ocr clean-extract clean-normalize clean
 
 help:
 	@printf '%s\n' \
 		'Live documents land in data/01_raw/faxes.' \
 		'Synthetic generators write to data/reference/synthetic and do not touch that drop.' \
+		'Real-world fetchers write to data/reference/real_world and stage a few into faxes.' \
 		'' \
 		'  make data-synthea     10 Synthea patients into data/reference/synthetic/synthea' \
 		'  make data-mtsamples   MTSamples notes into data/reference/synthetic/mtsamples' \
 		'  make data-faxes       8 fax packets into data/reference/synthetic/faxes' \
 		'  make data-notes       notes, then faxes' \
 		'  make data-raw         all three generators, in order' \
+		'' \
+		'  make data-ucsf        UCSF tobacco-archive medical scans (adversarial OCR)' \
+		'  make data-pathlabs    Lal PathLabs / Quest / Labcorp / Sterling sample reports' \
+		'  make data-cms-onc     ONC Transitions of Care certification test PDFs' \
+		'  make data-real        all three real-world fetchers, in order' \
 		'' \
 		'  make data-run-raw     copy data/01_raw/faxes into triage and split each page' \
 		'  make triage-pdfs      split data/02_triage/unstructured into single pages' \
@@ -44,6 +50,17 @@ data-faxes:
 data-notes: data-mtsamples data-faxes
 
 data-raw: data-synthea data-notes
+
+data-ucsf:
+	$(UV) $(ROOT)/scripts/real_world/fetch_01_ucsf_tobacco.py
+
+data-pathlabs:
+	$(UV) $(ROOT)/scripts/real_world/fetch_02_pathology_labs.py
+
+data-cms-onc:
+	$(UV) $(ROOT)/scripts/real_world/fetch_03_cms_onc.py
+
+data-real: data-ucsf data-pathlabs data-cms-onc
 
 data-run-raw:
 	rm -rf $(ROOT)/data/02_triage/unstructured $(ROOT)/data/02_triage/atomic_pages

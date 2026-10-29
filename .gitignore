@@ -15,7 +15,7 @@ workbench-ui/dist/
 
 # Later pipeline stages stay local.
 # data/01_raw is the live document drop.
-# data/reference keeps the synthetic corpus.
+# data/reference keeps the synthetic and real-world corpora.
 data/*
 !data/01_raw/
 !data/reference/

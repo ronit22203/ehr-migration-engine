@@ -1,0 +1,136 @@
+{
+  "count": 6,
+  "documents": [
+    {
+      "collection": [
+        "Lorillard Records",
+        "Master Settlement Agreement"
+      ],
+      "documentdate": "1997 December 09",
+      "format": null,
+      "id": "gqgg0072",
+      "pages": 15,
+      "path": "data/reference/real_world/01_ucsf_tobacco/gqgg0072_MEDICAL_RECORD_CONSULTATION_SHEET.pdf",
+      "source_url": "https://ucsf-idl-dataset.s3.us-east-1.amazonaws.com/g/q/g/g/gqgg0072/gqgg0072.pdf",
+      "title": "MEDICAL RECORD CONSULTATION SHEET",
+      "type": [
+        "chart",
+        "form",
+        "graph",
+        "map",
+        "report"
+      ],
+      "viewer_url": "https://www.industrydocuments.ucsf.edu/docs/gqgg0072"
+    },
+    {
+      "collection": [
+        "Philip Morris Records",
+        "Master Settlement Agreement"
+      ],
+      "documentdate": "1972 September 12",
+      "format": "scanned hardcopy",
+      "id": "nlgb0106",
+      "pages": 2,
+      "path": "data/reference/real_world/01_ucsf_tobacco/nlgb0106_PULMONARY_LABORATORY_REPORT_SWINGLE_HAROLD_W.pdf",
+      "source_url": "https://ucsf-idl-dataset.s3.us-east-1.amazonaws.com/n/l/g/b/nlgb0106/nlgb0106.pdf",
+      "title": "PULMONARY LABORATORY REPORT SWINGLE, HAROLD W.",
+      "type": [
+        "chart",
+        "form",
+        "graph",
+        "map",
+        "report",
+        "table"
+      ],
+      "viewer_url": "https://www.industrydocuments.ucsf.edu/docs/nlgb0106"
+    },
+    {
+      "collection": [
+        "Philip Morris Records",
+        "Master Settlement Agreement"
+      ],
+      "documentdate": "1958 September 01",
+      "format": "scanned hardcopy",
+      "id": "rzll0000",
+      "pages": 4,
+      "path": "data/reference/real_world/01_ucsf_tobacco/rzll0000_PROGRESS_NOTE_580901_590430_TOBACCO_INDUSTRY_RESEARCH_COMMITTEE_GRANT.pdf",
+      "source_url": "https://ucsf-idl-dataset.s3.us-east-1.amazonaws.com/r/z/l/l/rzll0000/rzll0000.pdf",
+      "title": "PROGRESS NOTE 580901 - 590430 TOBACCO INDUSTRY RESEARCH COMMITTEE GRANT",
+      "type": [
+        "chart",
+        "form",
+        "graph",
+        "report"
+      ],
+      "viewer_url": "https://www.industrydocuments.ucsf.edu/docs/rzll0000"
+    },
+    {
+      "collection": [
+        "Philip Morris Records",
+        "Master Settlement Agreement"
+      ],
+      "documentdate": "1992 February 05",
+      "format": "scanned hardcopy",
+      "id": "gjhg0120",
+      "pages": 5,
+      "path": "data/reference/real_world/01_ucsf_tobacco/gjhg0120_METALLURGICAL_LABORATORY_REPORT_NO_W4_EXAMINATION_OF_TWO_WORN_NI_HARD_P.pdf",
+      "source_url": "https://ucsf-idl-dataset.s3.us-east-1.amazonaws.com/g/j/h/g/gjhg0120/gjhg0120.pdf",
+      "title": "METALLURGICAL LABORATORY REPORT NO. W4 EXAMINATION OF TWO WORN NI-HARD PLATES RETURNED BY PARK 500 OF CHESTER, VIRGINIA",
+      "type": [
+        "chart",
+        "graph",
+        "map",
+        "photograph",
+        "report",
+        "table"
+      ],
+      "viewer_url": "https://www.industrydocuments.ucsf.edu/docs/gjhg0120"
+    },
+    {
+      "collection": [
+        "Philip Morris Records",
+        "Master Settlement Agreement"
+      ],
+      "documentdate": "1983 September 01",
+      "format": "scanned hardcopy",
+      "id": "hgck0181",
+      "pages": 1,
+      "path": "data/reference/real_world/01_ucsf_tobacco/hgck0181_DISCHARGE_SUMMARY_SHEET.pdf",
+      "source_url": "https://ucsf-idl-dataset.s3.us-east-1.amazonaws.com/h/g/c/k/hgck0181/hgck0181.pdf",
+      "title": "DISCHARGE SUMMARY SHEET",
+      "type": [
+        "form",
+        "report"
+      ],
+      "viewer_url": "https://www.industrydocuments.ucsf.edu/docs/hgck0181"
+    },
+    {
+      "collection": [
+        "Philip Morris Records",
+        "Master Settlement Agreement"
+      ],
+      "documentdate": "1984 October 20",
+      "format": "scanned hardcopy",
+      "id": "hxpj0181",
+      "pages": 1,
+      "path": "data/reference/real_world/01_ucsf_tobacco/hxpj0181_PROGRESS_NOTES_NUMBER_23_A.pdf",
+      "source_url": "https://ucsf-idl-dataset.s3.us-east-1.amazonaws.com/h/x/p/j/hxpj0181/hxpj0181.pdf",
+      "title": "PROGRESS NOTES NUMBER 23 A",
+      "type": [
+        "note",
+        "report"
+      ],
+      "viewer_url": "https://www.industrydocuments.ucsf.edu/docs/hxpj0181"
+    }
+  ],
+  "group": "01_ucsf_tobacco",
+  "queries": [
+    "title:(\"discharge summary\")",
+    "title:(\"patient chart\" OR \"hospital chart\" OR \"medical chart\")",
+    "title:(\"lab report\" OR \"laboratory report\" OR \"lab results\")",
+    "title:(\"progress note\" OR \"consult\" OR \"consultation\") AND type:(medical OR \"medical record\" OR note OR chart)",
+    "\"discharge summary\" AND type:(medical OR \"medical record\" OR report OR chart)"
+  ],
+  "solr": "https://metadata.idl.ucsf.edu/solr/ltdl3/query",
+  "source": "UCSF Truth Tobacco Industry Documents / IDL public dataset"
+}

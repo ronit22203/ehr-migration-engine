@@ -1,0 +1,56 @@
+{
+  "count": 7,
+  "documents": [
+    {
+      "lab": "lalpathlabs",
+      "name": "lal_liver_panel_Z005",
+      "path": "data/reference/real_world/02_pathology_labs/lal_liver_panel_Z005.pdf",
+      "url": "https://cdn1.lalpathlabs.com/live/reports/Z005.pdf"
+    },
+    {
+      "lab": "lalpathlabs",
+      "name": "lal_kidney_panel_Z007",
+      "path": "data/reference/real_world/02_pathology_labs/lal_kidney_panel_Z007.pdf",
+      "url": "https://cdn1.lalpathlabs.com/live/reports/Z007.pdf"
+    },
+    {
+      "lab": "lalpathlabs",
+      "name": "lal_cmv_pcr_N031",
+      "path": "data/reference/real_world/02_pathology_labs/lal_cmv_pcr_N031.pdf",
+      "url": "https://cdn1.lalpathlabs.com/live/reports/N031.pdf"
+    },
+    {
+      "lab": "lalpathlabs",
+      "name": "lal_allergy_comprehensive_Z089",
+      "path": "data/reference/real_world/02_pathology_labs/lal_allergy_comprehensive_Z089.pdf",
+      "url": "https://cdn1.lalpathlabs.com/live/reports/Z089.pdf"
+    },
+    {
+      "lab": "lalpathlabs",
+      "name": "lal_sample_Z003",
+      "path": "data/reference/real_world/02_pathology_labs/lal_sample_Z003.pdf",
+      "url": "https://cdn1.lalpathlabs.com/live/reports/Z003.pdf"
+    },
+    {
+      "lab": "lalpathlabs",
+      "name": "lal_sample_Z010",
+      "path": "data/reference/real_world/02_pathology_labs/lal_sample_Z010.pdf",
+      "url": "https://cdn1.lalpathlabs.com/live/reports/Z010.pdf"
+    },
+    {
+      "lab": "lalpathlabs",
+      "name": "lal_sample_H001",
+      "path": "data/reference/real_world/02_pathology_labs/lal_sample_H001.pdf",
+      "url": "https://cdn1.lalpathlabs.com/live/reports/H001.pdf"
+    }
+  ],
+  "dork_hints": [
+    "filetype:pdf site:lalpathlabs.com \"sample report\"",
+    "filetype:pdf site:metropolisindia.com \"test report\"",
+    "filetype:pdf site:questdiagnostics.com \"specimen report\"",
+    "filetype:pdf site:labcorp.com \"sample\""
+  ],
+  "group": "02_pathology_labs",
+  "notes": "Metropolis India does not publish a stable public sample-report PDF; Sterling Accuris is included as the India nested-table / watermark stand-in.",
+  "source": "Public diagnostic-chain sample report PDFs"
+}
