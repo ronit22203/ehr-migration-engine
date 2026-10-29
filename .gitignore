@@ -9,6 +9,10 @@ wheels/
 # Virtual environments
 .venv
 
+# Blueprint workbench frontend
+workbench-ui/node_modules/
+workbench-ui/dist/
+
 # Later pipeline stages stay local.
 # data/01_raw is the live document drop.
 # data/reference keeps the synthetic corpus.

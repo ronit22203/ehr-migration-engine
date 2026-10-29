@@ -1,0 +1,176 @@
+:root {
+  color: #334155;
+  background: #ffffff;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+}
+
+.wb-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem 0.5rem;
+}
+
+.wb-header {
+  display: grid;
+  grid-template-columns: 1.15fr 5fr;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.wb-kicker {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.wb-title {
+  margin: 0.1rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 650;
+  color: #0f172a;
+}
+
+.wb-stage-bar {
+  justify-content: flex-end;
+}
+
+.wb-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 3.35fr 1.7fr;
+  gap: 0.65rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.wb-left,
+.wb-center,
+.wb-right,
+.wb-pane {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem 0.7rem;
+  overflow: auto;
+  max-height: calc(100vh - 7.5rem);
+}
+
+.wb-center {
+  background: #ffffff;
+}
+
+.wb-meta {
+  margin: 0 0 0.5rem;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.wb-packet {
+  margin-top: 0.65rem;
+}
+
+.wb-packet-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0.35rem;
+  word-break: break-all;
+}
+
+.wb-page-button {
+  margin-bottom: 0.25rem;
+}
+
+.wb-source {
+  width: 100%;
+  height: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.wb-pre {
+  margin: 0;
+  padding: 0.75rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.wb-pre-tight {
+  padding: 0.45rem 0.6rem;
+}
+
+.wb-table {
+  width: 100%;
+  background: #ffffff;
+}
+
+.wb-muted,
+.wb-check {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.wb-check {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.wb-review-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+.wb-timeline-page {
+  margin-bottom: 1rem;
+}
+
+.wb-timeline-section {
+  margin-top: 0.4rem;
+}
+
+.wb-console {
+  margin-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.35rem;
+}
+
+.wb-console-toggle {
+  background: transparent;
+  border: 0;
+  color: #334155;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.25rem 0;
+}
+
+.wb-console-body {
+  padding: 0.5rem 0 0.75rem;
+}
+
+.wb-loading {
+  display: grid;
+  place-items: center;
+  min-height: 40vh;
+}

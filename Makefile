@@ -3,7 +3,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 UV   := uv run --project $(ROOT) python
 
-.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr parse extract normalize graph fhir workbench clean-ocr clean-extract clean-normalize clean
+.PHONY: help data-synthea data-mtsamples data-faxes data-notes data-raw data-run-raw triage-pdfs ocr parse extract normalize graph fhir workbench workbench-ui clean-ocr clean-extract clean-normalize clean
 
 help:
 	@printf '%s\n' \
@@ -24,7 +24,8 @@ help:
 		'  make normalize        code conditions, medications, and labs into data/04_normalized' \
 		'  make graph             load data/04_normalized into local Neo4j' \
 		'  make fhir              write FHIR R4 transaction bundles to data/05_fhir' \
-		'  make workbench        open the clinical migration workbench' \
+		'  make workbench-ui     build the Blueprint.js workbench frontend' \
+		'  make workbench        serve the workbench API (and built UI) on :8501' \
 		'' \
 		'  make clean-ocr        delete data/03_ocr (Surya JSON and parsed text)' \
 		'  make clean-extract    delete data/04_structured (clinical JSON and errors)' \
@@ -71,8 +72,11 @@ graph:
 fhir:
 	uv run python -m src.ehr_migration_engine.fhir.serializer
 
+workbench-ui:
+	cd $(ROOT)/workbench-ui && npm run build
+
 workbench:
-	cd $(ROOT) && uv run streamlit run src/ehr_migration_engine/workbench/app.py
+	cd $(ROOT) && uv run uvicorn ehr_migration_engine.workbench.api:app --reload --host 127.0.0.1 --port 8501
 
 clean-ocr:
 	rm -rf $(ROOT)/data/03_ocr
