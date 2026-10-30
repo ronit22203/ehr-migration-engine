@@ -1,0 +1,40 @@
+# Copy to terraform.tfvars (gitignored) and adjust.
+# Auth: export RUNPOD_API_KEY=...  (never put the key here)
+
+template_name = "ehr-migration-engine"
+pod_name      = "ehr-migration-engine"
+
+image       = "runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04"
+# Pick from ./check_availability.sh — 4090 often sold out; 5080 is a fallback.
+gpu_type_id = "NVIDIA GeForce RTX 5080"
+gpu_count   = 1
+cloud       = "COMMUNITY"
+
+container_disk_gb = 50
+
+# Only used when create_network_volume = true (needs ≥ $5 balance).
+network_volume_name        = "ehr-migration-workspace"
+network_volume_size_gb     = 50
+network_volume_data_center = "US-KS-2"
+network_volume_type        = "HIGH_PERFORMANCE"
+network_volume_mount_path  = "/workspace"
+
+# Exact CUDA lists often yield "no instances available". [] accepts any host.
+allowed_cuda_versions = []
+
+ports = [
+  "22/tcp",
+  "8501/http",
+  "7474/http",
+  "7687/tcp",
+  "11434/http",
+]
+
+ehr_migration_root = "/workspace/ehr-migration-engine"
+desired_state      = "RUNNING"
+
+# Set create_pod = false to publish only the template (no hourly burn).
+# Network volumes require ≥ $5 Runpod account balance. If create fails with that
+# error, set create_network_volume = false (host-local persistent_volume at /workspace).
+create_pod            = true
+create_network_volume = false
