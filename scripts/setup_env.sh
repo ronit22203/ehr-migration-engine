@@ -31,6 +31,17 @@ need_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+# Runpod pods (and most containers) are already root and often lack sudo.
+sudo() {
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+    "$@"
+  elif need_cmd sudo; then
+    command sudo "$@"
+  else
+    die "need root or sudo to install packages (EUID=$(id -u))"
+  fi
+}
+
 ensure_path() {
   # uv and npm often land outside the non-login PATH.
   export PATH="${HOME}/.local/bin:/usr/local/bin:${PATH}"
