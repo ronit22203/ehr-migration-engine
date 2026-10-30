@@ -32,9 +32,30 @@ need_cmd() {
 }
 
 # Runpod pods (and most containers) are already root and often lack sudo.
+# Strip sudo-only flags (e.g. -E from `sudo -E bash -`) before exec.
 sudo() {
   if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-    "$@"
+    local -a args=()
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        -E|-H|-n|-s|-i|-K|-k|-l|-v|-V|-h)
+          shift
+          ;;
+        -u|-g|-C|-p|-D|-T|-R|-U)
+          shift 2
+          ;;
+        --)
+          shift
+          args+=("$@")
+          break
+          ;;
+        *)
+          args+=("$@")
+          break
+          ;;
+      esac
+    done
+    "${args[@]}"
   elif need_cmd sudo; then
     command sudo "$@"
   else
