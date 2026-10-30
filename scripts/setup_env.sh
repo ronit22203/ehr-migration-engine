@@ -132,6 +132,52 @@ install_python_deps() {
   (cd "${ROOT}" && uv sync)
 }
 
+install_llama_server() {
+  # Surya OCR on Runpod uses the llama.cpp backend (no Docker/vLLM).
+  ensure_path
+  if need_cmd llama-server; then
+    log "llama-server already installed: $(command -v llama-server)"
+    return
+  fi
+  if [[ "${SKIP_LLAMA_SERVER:-0}" == "1" ]]; then
+    log "SKIP_LLAMA_SERVER=1 — skipping llama-server install"
+    return
+  fi
+
+  log "Installing llama-server (llama.cpp) for Surya GGUF OCR"
+  # Official installer picks a CUDA build when NVIDIA tooling is present.
+  if curl -fsSL https://llama.app/install.sh | sh; then
+    ensure_path
+    export PATH="/usr/local/bin:${HOME}/.local/bin:${PATH}"
+  fi
+
+  if ! need_cmd llama-server; then
+    # Fallback: pinned CUDA 12.8 Ubuntu x64 release asset (works with driver CUDA 12+/13).
+    local tag="b11946"
+    local archive="llama-${tag}-bin-ubuntu-cuda-12.8-x64.tar.gz"
+    local url="https://github.com/ggml-org/llama.cpp/releases/download/${tag}/${archive}"
+    local dest="/opt/llama.cpp"
+    log "llama.app installer did not put llama-server on PATH; fetching ${archive}"
+    sudo mkdir -p "${dest}"
+    curl -fsSL "${url}" -o "/tmp/${archive}"
+    sudo tar -xzf "/tmp/${archive}" -C "${dest}" --strip-components=1 2>/dev/null \
+      || sudo tar -xzf "/tmp/${archive}" -C "${dest}"
+    if [[ -x "${dest}/llama-server" ]]; then
+      sudo ln -sfn "${dest}/llama-server" /usr/local/bin/llama-server
+    elif [[ -x "${dest}/bin/llama-server" ]]; then
+      sudo ln -sfn "${dest}/bin/llama-server" /usr/local/bin/llama-server
+    else
+      local found
+      found="$(find "${dest}" -type f -name llama-server 2>/dev/null | head -1 || true)"
+      [[ -n "${found}" ]] || die "llama-server binary not found after extract"
+      sudo ln -sfn "${found}" /usr/local/bin/llama-server
+    fi
+  fi
+
+  need_cmd llama-server || die "llama-server install failed"
+  log "llama-server ready: $(command -v llama-server)"
+}
+
 install_ollama() {
   ensure_path
   if ! need_cmd ollama; then
@@ -265,6 +311,13 @@ health_checks() {
     failed=1
   fi
 
+  if need_cmd llama-server; then
+    log "llama-server OK ($(command -v llama-server))"
+  else
+    warn "llama-server not on PATH (required for make ocr)"
+    failed=1
+  fi
+
   if curl -fsS --max-time 5 http://127.0.0.1:11434/api/tags >/dev/null; then
     log "Ollama OK"
   else
@@ -304,6 +357,7 @@ main() {
   install_uv
   install_node
   install_python_deps
+  install_llama_server
   install_ollama
   install_neo4j
   build_workbench_ui
@@ -315,9 +369,11 @@ Bootstrap complete.
 
 Next (on the pod):
   cd ${ROOT}
+  export PATH="\$HOME/.local/bin:/usr/local/bin:\$PATH"
   # Serve workbench on all interfaces so Runpod HTTP proxy can reach it:
   uv run uvicorn ehr_migration_engine.workbench.api:app --host 0.0.0.0 --port 8501
-  # Pipeline stages: make ocr / extract / normalize / graph / fhir
+  # Pipeline stages (OCR uses llama.cpp/GGUF — no Docker):
+  #   make data-run-raw && make ocr && make extract && make normalize && make graph && make fhir
 
 EOF
 }

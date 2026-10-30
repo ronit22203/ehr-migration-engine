@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import threading
 import time
 from datetime import datetime
@@ -60,6 +61,27 @@ def _use_cached_gguf() -> None:
         _log(f"Using cached GGUF mmproj: {mmproj}")
 
 
+def _resolve_inference_backend() -> str:
+    """Pick Surya backend.
+
+    Surya's auto mode selects vLLM (Docker) whenever an NVIDIA GPU is present.
+    Runpod pods cannot nest Docker, so default to llama.cpp/GGUF unless the
+    operator explicitly sets SURYA_INFERENCE_BACKEND=vllm.
+    """
+    forced = (os.environ.get("SURYA_INFERENCE_BACKEND") or "").strip().lower()
+    if forced in {"vllm", "llamacpp"}:
+        if forced == "vllm" and shutil.which("docker") is None:
+            _log("SURYA_INFERENCE_BACKEND=vllm but docker is missing; falling back to llamacpp")
+            return "llamacpp"
+        return forced
+    if shutil.which("docker") is None:
+        _log("No docker binary — using llamacpp backend (GGUF / llama-server)")
+        return "llamacpp"
+    # Prefer GGUF even when docker exists; vLLM remains opt-in.
+    _log("Using llamacpp backend by default (set SURYA_INFERENCE_BACKEND=vllm to override)")
+    return "llamacpp"
+
+
 def run_ocr(pages_dir: Path | None = None, ocr_dir: Path | None = None) -> None:
     """OCR each single-page PDF and store Surya's layout blocks as JSON."""
     pages_dir = pages_dir or PAGES_DIR
@@ -81,6 +103,8 @@ def run_ocr(pages_dir: Path | None = None, ocr_dir: Path | None = None) -> None:
 
     _use_cached_gguf()
     os.environ.setdefault("LOGLEVEL", "DEBUG")
+    backend = _resolve_inference_backend()
+    os.environ["SURYA_INFERENCE_BACKEND"] = backend
 
     # Import Surya before torch so the MPS fallback in surya/__init__.py applies.
     from surya.inference import SuryaInferenceManager
@@ -92,11 +116,13 @@ def run_ocr(pages_dir: Path | None = None, ocr_dir: Path | None = None) -> None:
     configure_logging()
     _log(
         f"Loading Surya at {settings.IMAGE_DPI_HIGHRES} DPI, "
-        f"batch size {BATCH_SIZE}, log level {settings.LOGLEVEL}"
+        f"batch size {BATCH_SIZE}, backend {backend}, log level {settings.LOGLEVEL}"
     )
     _log("Creating the inference client. This attaches to llama-server or starts one.")
     started = time.perf_counter()
-    predictor = RecognitionPredictor(SuryaInferenceManager())
+    # Pass method explicitly — SuryaInferenceManager ignores settings on construct
+    # and would otherwise auto-pick vLLM whenever /dev/nvidia0 exists.
+    predictor = RecognitionPredictor(SuryaInferenceManager(method=backend))
     _log(f"Inference client ready in {time.perf_counter() - started:.1f}s")
 
     batches = range(0, len(pending), BATCH_SIZE)
