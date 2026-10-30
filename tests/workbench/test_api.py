@@ -114,6 +114,21 @@ def test_upload_and_delete_fax(client: TestClient, tmp_path: Path) -> None:
     assert not (tmp_path / "data" / "01_raw" / "faxes" / "Clinic-Note.pdf").is_file()
 
 
+def test_upload_fax_raw_body(client: TestClient, tmp_path: Path) -> None:
+    response = client.post(
+        "/api/faxes",
+        content=b"%PDF-1.4 raw-upload",
+        headers={
+            "Content-Type": "application/pdf",
+            "X-Filename": "Raw Upload.pdf",
+        },
+    )
+    assert response.status_code == 200
+    fax = response.json()["fax"]
+    assert fax["filename"] == "Raw-Upload.pdf"
+    assert (tmp_path / "data" / "01_raw" / "faxes" / "Raw-Upload.pdf").read_bytes() == b"%PDF-1.4 raw-upload"
+
+
 def test_delete_packet_removes_derived_pages(client: TestClient, tmp_path: Path) -> None:
     atomic = tmp_path / "data" / "02_triage" / "atomic_pages" / "packet_001_scanned_page_001.pdf"
     assert atomic.is_file()

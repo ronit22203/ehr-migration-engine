@@ -84,21 +84,21 @@ export function Explorer({
           Replaces the live drop with this one PDF so Split/OCR process only your upload.
         </p>
         <label className="wb-upload-button" htmlFor={inputId}>
+          <input
+            id={inputId}
+            className="wb-upload-input"
+            type="file"
+            accept="application/pdf,.pdf"
+            disabled={busy}
+            onChange={(event) => {
+              const files = event.currentTarget.files
+              event.currentTarget.value = ''
+              void onUpload(files)
+            }}
+          />
           {busy ? <Spinner size={16} /> : null}
           {busy ? 'Uploading…' : 'Choose PDF to upload'}
         </label>
-        <input
-          id={inputId}
-          className="wb-upload-input"
-          type="file"
-          accept="application/pdf,.pdf"
-          disabled={busy}
-          onChange={(event) => {
-            const files = event.currentTarget.files
-            event.currentTarget.value = ''
-            void onUpload(files)
-          }}
-        />
         <Button
           small
           minimal

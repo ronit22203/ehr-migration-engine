@@ -104,9 +104,24 @@ export async function postReview(
 }
 
 export async function uploadFax(file: File) {
-  const form = new FormData()
-  form.append('file', file)
-  const response = await fetch('/api/faxes', { method: 'POST', body: form })
+  // Raw PDF body + X-Filename: Runpod's HTTP proxy often drops multipart uploads.
+  let response: Response
+  try {
+    response = await fetch('/api/faxes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type || 'application/pdf',
+        'X-Filename': file.name,
+      },
+      body: file,
+    })
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? `Upload failed to reach the pod (${err.message}). Try a smaller PDF or SCP to data/01_raw/faxes/.`
+        : 'Upload failed to reach the pod.',
+    )
+  }
   if (!response.ok) throw new Error(await readError(response))
   return response.json() as Promise<{
     ok: boolean

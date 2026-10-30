@@ -8,11 +8,12 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import unquote
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.datastructures import UploadFile
 
 from ehr_migration_engine.graph.timeline import ClinicalGraph
 from ehr_migration_engine.workbench.catalog import BatchCatalog, PageArtifacts, load_catalog
@@ -498,9 +499,30 @@ def get_faxes() -> dict[str, Any]:
 
 
 @app.post("/api/faxes")
-async def post_fax(file: UploadFile = File(...)) -> dict[str, Any]:
-    filename = file.filename or "upload.pdf"
-    data = await file.read()
+async def post_fax(
+    request: Request,
+    x_filename: str | None = Header(default=None, alias="X-Filename"),
+) -> dict[str, Any]:
+    """Accept a PDF as a raw body (preferred) or multipart form field ``file``.
+
+    Runpod's HTTP proxy often drops multipart/form-data uploads (HTTP/2), so the
+    workbench UI posts ``application/pdf`` with ``X-Filename`` instead.
+    """
+    content_type = (request.headers.get("content-type") or "").lower()
+    filename = "upload.pdf"
+    data = b""
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        upload = form.get("file")
+        if not isinstance(upload, UploadFile):
+            raise HTTPException(status_code=400, detail="Expected multipart field 'file'.")
+        filename = upload.filename or "upload.pdf"
+        data = await upload.read()
+    else:
+        filename = x_filename or "upload.pdf"
+        data = await request.body()
+
     try:
         saved = fax_drop.save_upload(filename, data, _root())
     except ValueError as exc:
