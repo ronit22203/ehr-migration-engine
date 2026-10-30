@@ -87,7 +87,8 @@ install_system_packages() {
       libgl1 \
       libglib2.0-0 \
       lsb-release \
-      apt-transport-https
+      apt-transport-https \
+      zstd
   else
     die "apt-get not found; this script targets Ubuntu/Debian Runpod images"
   fi
