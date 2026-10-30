@@ -144,34 +144,28 @@ install_llama_server() {
     return
   fi
 
-  log "Installing llama-server (llama.cpp) for Surya GGUF OCR"
-  # Official installer picks a CUDA build when NVIDIA tooling is present.
-  if curl -fsSL https://llama.app/install.sh | sh; then
-    ensure_path
-    export PATH="/usr/local/bin:${HOME}/.local/bin:${PATH}"
-  fi
-
-  if ! need_cmd llama-server; then
-    # Fallback: pinned CUDA 12.8 Ubuntu x64 release asset (works with driver CUDA 12+/13).
-    local tag="b11946"
-    local archive="llama-${tag}-bin-ubuntu-cuda-12.8-x64.tar.gz"
-    local url="https://github.com/ggml-org/llama.cpp/releases/download/${tag}/${archive}"
-    local dest="/opt/llama.cpp"
-    log "llama.app installer did not put llama-server on PATH; fetching ${archive}"
-    sudo mkdir -p "${dest}"
-    curl -fsSL "${url}" -o "/tmp/${archive}"
-    sudo tar -xzf "/tmp/${archive}" -C "${dest}" --strip-components=1 2>/dev/null \
-      || sudo tar -xzf "/tmp/${archive}" -C "${dest}"
-    if [[ -x "${dest}/llama-server" ]]; then
-      sudo ln -sfn "${dest}/llama-server" /usr/local/bin/llama-server
-    elif [[ -x "${dest}/bin/llama-server" ]]; then
-      sudo ln -sfn "${dest}/bin/llama-server" /usr/local/bin/llama-server
-    else
-      local found
-      found="$(find "${dest}" -type f -name llama-server 2>/dev/null | head -1 || true)"
-      [[ -n "${found}" ]] || die "llama-server binary not found after extract"
-      sudo ln -sfn "${found}" /usr/local/bin/llama-server
-    fi
+  log "Installing classic llama-server binary for Surya GGUF OCR"
+  # Note: https://llama.app/install.sh installs a different `llama` CLI / router
+  # (`llama serve`), not the `llama-server` binary Surya spawns. Always fetch
+  # the ggml-org CUDA release asset that contains llama-server.
+  local tag="${LLAMA_CPP_TAG:-b11946}"
+  local archive="llama-${tag}-bin-ubuntu-cuda-12.8-x64.tar.gz"
+  local url="https://github.com/ggml-org/llama.cpp/releases/download/${tag}/${archive}"
+  local dest="/opt/llama.cpp"
+  log "Fetching ${archive}"
+  sudo mkdir -p "${dest}"
+  curl -fsSL "${url}" -o "/tmp/${archive}"
+  sudo rm -rf "${dest:?}/"*
+  sudo tar -xzf "/tmp/${archive}" -C "${dest}"
+  local found
+  found="$(find "${dest}" -type f -name llama-server 2>/dev/null | head -1 || true)"
+  [[ -n "${found}" ]] || die "llama-server binary not found in ${archive}"
+  sudo chmod +x "${found}"
+  sudo ln -sfn "${found}" /usr/local/bin/llama-server
+  # Keep libs next to the binary discoverable.
+  if [[ -d "$(dirname "${found}")" ]]; then
+    echo "$(dirname "${found}")" | sudo tee /etc/ld.so.conf.d/llama-cpp.conf >/dev/null || true
+    sudo ldconfig 2>/dev/null || true
   fi
 
   need_cmd llama-server || die "llama-server install failed"
