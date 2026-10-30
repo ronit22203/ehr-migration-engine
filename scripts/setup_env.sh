@@ -132,44 +132,44 @@ install_python_deps() {
   (cd "${ROOT}" && uv sync)
 }
 
-install_llama_server() {
-  # Surya OCR on Runpod uses the llama.cpp backend (no Docker/vLLM).
-  ensure_path
-  if need_cmd llama-server; then
-    log "llama-server already installed: $(command -v llama-server)"
-    return
+_llama_server_works() {
+  local bin="$1"
+  [[ -x "${bin}" ]] || return 1
+  # Recent ggml Ubuntu CUDA tarballs need glibc>=2.38; Ubuntu 22.04 pods fail.
+  # llama.app's `llama` CLI is also wrong (rejects classic `-m` flags).
+  if ! "${bin}" --help >/dev/null 2>&1; then
+    return 1
   fi
+  return 0
+}
+
+install_llama_server() {
+  # Surya OCR needs a classic llama-server that accepts -m / --mmproj.
+  ensure_path
+  export PATH="/usr/local/bin:${HOME}/.local/bin:${PATH}"
   if [[ "${SKIP_LLAMA_SERVER:-0}" == "1" ]]; then
     log "SKIP_LLAMA_SERVER=1 — skipping llama-server install"
     return
   fi
 
-  log "Installing classic llama-server binary for Surya GGUF OCR"
-  # Note: https://llama.app/install.sh installs a different `llama` CLI / router
-  # (`llama serve`), not the `llama-server` binary Surya spawns. Always fetch
-  # the ggml-org CUDA release asset that contains llama-server.
-  local tag="${LLAMA_CPP_TAG:-b11946}"
-  local archive="llama-${tag}-bin-ubuntu-cuda-12.8-x64.tar.gz"
-  local url="https://github.com/ggml-org/llama.cpp/releases/download/${tag}/${archive}"
-  local dest="/opt/llama.cpp"
-  log "Fetching ${archive}"
-  sudo mkdir -p "${dest}"
-  curl -fsSL "${url}" -o "/tmp/${archive}"
-  sudo rm -rf "${dest:?}/"*
-  sudo tar -xzf "/tmp/${archive}" -C "${dest}"
-  local found
-  found="$(find "${dest}" -type f -name llama-server 2>/dev/null | head -1 || true)"
-  [[ -n "${found}" ]] || die "llama-server binary not found in ${archive}"
-  sudo chmod +x "${found}"
-  sudo ln -sfn "${found}" /usr/local/bin/llama-server
-  # Keep libs next to the binary discoverable.
-  if [[ -d "$(dirname "${found}")" ]]; then
-    echo "$(dirname "${found}")" | sudo tee /etc/ld.so.conf.d/llama-cpp.conf >/dev/null || true
-    sudo ldconfig 2>/dev/null || true
-  fi
+  local candidates=(
+    /usr/local/lib/ollama/llama-server
+    /usr/lib/ollama/llama-server
+    "$(command -v llama-server 2>/dev/null || true)"
+  )
+  local cand
+  for cand in "${candidates[@]}"; do
+    [[ -n "${cand}" ]] || continue
+    if _llama_server_works "${cand}"; then
+      sudo ln -sfn "${cand}" /usr/local/bin/llama-server
+      # Ollama ships CUDA libs beside the binary.
+      export LD_LIBRARY_PATH="$(dirname "${cand}"):${LD_LIBRARY_PATH:-}"
+      log "llama-server ready: ${cand}"
+      return
+    fi
+  done
 
-  need_cmd llama-server || die "llama-server install failed"
-  log "llama-server ready: $(command -v llama-server)"
+  die "No working llama-server found. Install Ollama first (provides /usr/local/lib/ollama/llama-server), or set LLAMA_CPP_BINARY to a classic llama-server built for this glibc."
 }
 
 install_ollama() {
@@ -351,8 +351,9 @@ main() {
   install_uv
   install_node
   install_python_deps
-  install_llama_server
   install_ollama
+  # Prefer Ollama's bundled classic llama-server (glibc-compatible on Ubuntu 22.04).
+  install_llama_server
   install_neo4j
   build_workbench_ui
   health_checks || true
